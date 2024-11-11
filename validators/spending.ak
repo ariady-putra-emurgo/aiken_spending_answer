@@ -79,6 +79,7 @@ validator cip_68(nonce: OutputReference) {
       Update -> {
         // must consume usr_token to proof ownership
         expect [Pair(ref_token_name, _)] =
+          // extract the input ref_token AssetName by self PolicyID
           input.output.value |> value.to_pairs(policy_id)
         let token_name = ref_token_name |> bytearray.drop(4)
         expect {
@@ -97,9 +98,16 @@ validator cip_68(nonce: OutputReference) {
         expect InlineDatum(metadata) = output.datum
         expect _: Cip68 = metadata
         expect [Pair(o_ref_token_name, _)] =
+          // extract the output ref_token AssetName by self PolicyID
           output.value |> value.to_pairs(policy_id)
         and {
           o_ref_token_name == ref_token_name,
+          // ☝🏻must resend ref_token with the same AssetName
+
+          output.address == input.output.address,
+          // ☝🏻prevent insufficient-staking-control vulnerability:
+          // https://library.mlabs.city/common-plutus-security-vulnerabilities#11.insufficientstakingkeycontrol
+
           output.reference_script == input.output.reference_script,
         }
       }
